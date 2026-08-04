@@ -35,40 +35,49 @@ export default async function handler(req, res) {
 
     const promptText = `Analyze this ${marketType || 'Trading'} chart screenshot on a ${timeframe || '15M'} timeframe. Provide trade bias (BUY/SELL), entry, stop loss, take profit targets, and concise technical analysis.`;
 
-    // Correct Active Model: gemini-2.0-flash
-    const googleApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    // Try multiple models in case free quota on primary is 0
+    const candidateModels = [
+      'gemini-1.5-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-1.5-pro'
+    ];
 
-    const response = await fetch(googleApiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: promptText },
-              {
-                inline_data: {
-                  mime_type: 'image/jpeg',
-                  data: base64Data,
+    let lastError = null;
+
+    for (const modelName of candidateModels) {
+      const googleApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+      const response = await fetch(googleApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: promptText },
+                {
+                  inline_data: {
+                    mime_type: 'image/jpeg',
+                    data: base64Data,
+                  },
                 },
-              },
-            ],
-          },
-        ],
-      }),
-    });
+              ],
+            },
+          ],
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Google AI API Error');
+      if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return res.status(200).json({ result: data.candidates[0].content.parts[0].text });
+      }
+
+      lastError = data.error?.message || `Failed with ${modelName}`;
     }
 
-    const analysisResult = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+    throw new Error(lastError);
 
-    return res.status(200).json({ result: analysisResult });
   } catch (error) {
     console.error('API Error:', error);
     return res.status(500).json({ error: error.message || 'Failed to analyze chart' });

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real AI Chart Signal Decoder</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+    body { background-color: #0d1117; color: #c9d1d9; display: flex; height: 100vh; overflow: hidden; }
+
+    .app-layout { display: flex; width: 100vw; height: 100vh; }
+    aside { width: 260px; background: #161b22; border-right: 1px solid #30363d; display: flex; flex-direction: column; justify-content: space-between; padding: 20px 15px; }
+    .logo { color: #58a6ff; font-size: 1.2rem; font-weight: 700; margin-bottom: 25px; }
+    
+    .history-section { margin-top: 20px; border-top: 1px solid #30363d; padding-top: 15px; flex-grow: 1; overflow-y: auto; }
+    .history-title { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; margin-bottom: 10px; font-weight: 600; }
+    .history-item { font-size: 0.82rem; padding: 8px; border-radius: 4px; color: #c9d1d9; border: 1px solid transparent; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    main { flex-grow: 1; padding: 25px; overflow-y: auto; }
+    header { margin-bottom: 20px; border-bottom: 1px solid #30363d; padding-bottom: 12px; }
+    h1 { color: #58a6ff; font-size: 1.8rem; font-weight: 700; }
+
+    .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } body { flex-direction: column; } aside { width: 100%; } }
+
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .card h3 { color: #f0f6fc; font-size: 1rem; margin-bottom: 15px; }
+
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    label { font-size: 0.75rem; color: #8b949e; display: block; margin-bottom: 4px; }
+    select { width: 100%; background: #0d1117; color: #c9d1d9; border: 1px solid #30363d; padding: 8px; border-radius: 6px; outline: none; }
+
+    .upload-box { border: 2px dashed #238636; border-radius: 8px; padding: 25px; text-align: center; cursor: pointer; background: #0d1117; min-height: 180px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    #previewImg { max-width: 100%; max-height: 180px; border-radius: 6px; display: none; margin-top: 10px; }
+
+    button.btn-primary { background: #238636; color: white; border: none; padding: 12px; font-size: 0.95rem; font-weight: 600; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 15px; }
+    button.btn-primary:hover { background: #2ea043; }
+
+    .result-box { background: #0d1117; border: 1px solid #30363d; padding: 15px; border-radius: 8px; min-height: 280px; font-size: 0.88rem; color: #c9d1d9; line-height: 1.6; }
+    .badge { background: #388bfd26; color: #58a6ff; border: 1px solid #388bfd66; padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block; margin-bottom: 12px; }
+
+    .loading-spinner { display: none; text-align: center; padding: 40px 0; }
+    .spinner { border: 3px solid #30363d; border-top: 3px solid #58a6ff; border-radius: 50%; width: 28px; height: 28px; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="app-layout">
+    <aside>
+      <div>
+        <div class="logo">⚡ Institutional AI Decoder</div>
+        <div class="history-section">
+          <div class="history-title">Recent Signals</div>
+          <div id="historyList">
+            <p style="font-size: 0.75rem; color: #8b949e;">No history yet</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <header>
+        <h1>AI Chart Signal Decoder</h1>
+        <p style="color: #8b949e; font-size: 0.9rem; margin-top: 4px;">Powered by Secure Gemini Vision Serverless Backend</p>
+      </header>
+
+      <div class="main-grid">
+        <div class="card">
+          <h3>📊 Upload Trading Screenshot</h3>
+          
+          <div class="options-grid">
+            <div>
+              <label>Market Type</label>
+              <select id="marketType">
+                <option value="Forex/Gold">Forex / Gold</option>
+                <option value="Crypto">Crypto</option>
+                <option value="Stocks">Stocks/Indices</option>
+              </select>
+            </div>
+            <div>
+              <label>Timeframe</label>
+              <select id="timeframe">
+                <option value="15m">15 Minutes</option>
+                <option value="1h" selected>1 Hour</option>
+                <option value="4h">4 Hours</option>
+                <option value="1d">1 Day</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="upload-box" onclick="document.getElementById('chartInput').click()">
+            <span id="uploadText">📁 Click to Upload Chart Screenshot</span>
+            <img id="previewImg" alt="Chart Preview">
+            <input type="file" id="chartInput" accept="image/*" style="display: none;" onchange="previewImage(event)">
+          </div>
+
+          <button class="btn-primary" onclick="startAnalysis()">Analyse Real Chart</button>
+        </div>
+
+        <div class="card">
+          <h3>🤖 AI Signal Intelligence</h3>
+          
+          <div class="result-box" id="resultContainer">
+            <span class="badge" id="statusBadge">Awaiting Chart Upload</span>
+            <div id="resultText">Upload a chart image to get real-time AI technical analysis and price predictions.</div>
+
+            <div class="loading-spinner" id="loadingSpinner">
+              <div class="spinner"></div>
+              <p>Gemini Vision AI is reading chart structure & price levels...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = document.getElementById('previewImg');
+          img.src = e.target.result;
+          img.style.display = 'block';
+          document.getElementById('uploadText').style.display = 'none';
+        }
+        reader.readAsDataURL(file);
+      }
+    }
+
+    async function startAnalysis() {
+      const img = document.getElementById('previewImg');
+      if (!img.src || img.style.display === 'none') {
+        alert('Pehle koi chart screenshot upload karein!');
+        return;
+      }
+
+      const market = document.getElementById('marketType').value;
+      const timeframe = document.getElementById('timeframe').value;
+      const spinner = document.getElementById('loadingSpinner');
+      const resultText = document.getElementById('resultText');
+      const badge = document.getElementById('statusBadge');
+
+      resultText.style.display = 'none';
+      spinner.style.display = 'block';
+      badge.innerText = "Analyzing via Gemini AI...";
+      badge.style.borderColor = "#e3b341";
+      badge.style.color = "#e3b341";
+
+      try {
+        // Send base64 image to backend serverless endpoint
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: img.src,
+            market: market,
+            timeframe: timeframe
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.result) {
+          spinner.style.display = 'none';
+          resultText.style.display = 'block';
+          badge.innerText = "Real Signal Decoded";
+          badge.style.borderColor = "#2ea043";
+          badge.style.color = "#3fb950";
+
+          resultText.innerHTML = data.result;
+          saveToHistory(market, timeframe, "AI Real Signal");
+        } else {
+          throw new Error(data.error || "Server response failed");
+        }
+
+      } catch (error) {
+        console.error(error);
+        spinner.style.display = 'none';
+        resultText.style.display = 'block';
+        badge.innerText = "Analysis Error";
+        badge.style.borderColor = "#f85149";
+        badge.style.color = "#f85149";
+        resultText.innerHTML = `<span style="color: #f85149;"><strong>Error:</strong> ${error.message}</span>`;
+      }
+    }
+
+    function saveToHistory(market, timeframe, type) {
+      const historyList = document.getElementById('historyList');
+      if (historyList.innerHTML.includes("No history yet")) historyList.innerHTML = '';
+
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const div = document.createElement('div');
+      div.className = 'history-item';
+      div.innerText = `⏱ ${timeStr} | ${market} (${timeframe}) - ${type}`;
+      historyList.prepend(div);
+    }
+  </script>
+</body>
+</html>

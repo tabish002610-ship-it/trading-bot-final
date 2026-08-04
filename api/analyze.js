@@ -35,11 +35,11 @@ export default async function handler(req, res) {
 
     const promptText = `Analyze this ${marketType || 'Trading'} chart screenshot on a ${timeframe || '15M'} timeframe. Provide trade bias (BUY/SELL), entry, stop loss, take profit targets, and concise technical analysis.`;
 
-    // Try multiple models in case free quota on primary is 0
+    // Only active and exact current models
     const candidateModels = [
-      'gemini-1.5-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-pro'
+      'gemini-2.5-flash',
+      'gemini-2.0-flash-exp',
+      'gemini-2.5-pro'
     ];
 
     let lastError = null;
@@ -73,10 +73,12 @@ export default async function handler(req, res) {
         return res.status(200).json({ result: data.candidates[0].content.parts[0].text });
       }
 
-      lastError = data.error?.message || `Failed with ${modelName}`;
+      if (data.error?.message) {
+        lastError = `${modelName}: ${data.error.message}`;
+      }
     }
 
-    throw new Error(lastError);
+    throw new Error(lastError || 'All models failed to generate analysis.');
 
   } catch (error) {
     console.error('API Error:', error);

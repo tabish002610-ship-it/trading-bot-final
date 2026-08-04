@@ -18,9 +18,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Read key from Environment Variables
+    const apiKey = process.env.GEMINI_API_KEY || process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY is not set in environment variables' });
+      return res.status(500).json({ error: 'API Key is not set in environment variables' });
     }
 
     const { image, imageData, imageBase64, chart, marketType, timeframe } = req.body || {};
@@ -30,47 +31,53 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No image provided' });
     }
 
-    // Clean Base64 Data
-    const base64Data = rawImage.replace(/^data:image\/\w+;base64,/, '');
+    // Ensure image has data URL prefix for OpenRouter Vision API
+    let imageUrl = rawImage;
+    if (!rawImage.startsWith('data:image/')) {
+      imageUrl = `data:image/jpeg;base64,${rawImage}`;
+    }
 
     const promptText = `Analyze this ${marketType || 'Trading'} chart screenshot on a ${timeframe || '15M'} timeframe. Provide trade bias (BUY/SELL), entry, stop loss, take profit targets, and concise technical analysis.`;
 
-    // Try fallback starting with 1.5-flash-8b which has high free quota
-    const candidateModels = [
-      'gemini-1.5-flash-8b',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-flash'
+    // OpenRouter Free Vision Models Loop
+    const freeModels = [
+      'google/gemini-2.0-flash-exp:free',
+      'google/gemini-flash-1.5-exp:free',
+      'meta-llama/llama-3.2-11b-vision-instruct:free'
     ];
 
     let lastError = null;
 
-    for (const modelName of candidateModels) {
-      const googleApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
-      const response = await fetch(googleApiUrl, {
+    for (const modelName of freeModels) {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${apiKey.trim()}`,
+          'HTTP-Referer': 'https://vercel.com',
+          'X-Title': 'AI Chart Signal Decoder',
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          contents: [
+          model: modelName,
+          messages: [
             {
-              parts: [
-                { text: promptText },
+              role: 'user',
+              content: [
+                { type: 'text', text: promptText },
                 {
-                  inline_data: {
-                    mime_type: 'image/jpeg',
-                    data: base64Data,
-                  },
-                },
-              ],
-            },
-          ],
-        }),
+                  type: 'image_url',
+                  image_url: { url: imageUrl }
+                }
+              ]
+            }
+          ]
+        })
       });
 
       const data = await response.json();
 
-      if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        return res.status(200).json({ result: data.candidates[0].content.parts[0].text });
+      if (response.ok && data.choices?.[0]?.message?.content) {
+        return res.status(200).json({ result: data.choices[0].message.content });
       }
 
       if (data.error?.message) {
@@ -78,7 +85,7 @@ export default async function handler(req, res) {
       }
     }
 
-    throw new Error(lastError || 'Quota issue across free models.');
+    throw new Error(lastError || 'Failed to fetch from OpenRouter models.');
 
   } catch (error) {
     console.error('API Error:', error);

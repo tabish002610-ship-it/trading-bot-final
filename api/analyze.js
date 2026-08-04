@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Read key from Environment Variables
+    // Read Key from Vercel Environment Variables
     const apiKey = process.env.GEMINI_API_KEY || process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: 'API Key is not set in environment variables' });
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No image provided' });
     }
 
-    // Ensure image has data URL prefix for OpenRouter Vision API
+    // Ensure proper Data URL format for OpenRouter
     let imageUrl = rawImage;
     if (!rawImage.startsWith('data:image/')) {
       imageUrl = `data:image/jpeg;base64,${rawImage}`;
@@ -39,11 +39,12 @@ export default async function handler(req, res) {
 
     const promptText = `Analyze this ${marketType || 'Trading'} chart screenshot on a ${timeframe || '15M'} timeframe. Provide trade bias (BUY/SELL), entry, stop loss, take profit targets, and concise technical analysis.`;
 
-    // OpenRouter Free Vision Models Loop
+    // Verified Active Free Vision Models on OpenRouter
     const freeModels = [
       'google/gemini-2.0-flash-exp:free',
-      'google/gemini-flash-1.5-exp:free',
-      'meta-llama/llama-3.2-11b-vision-instruct:free'
+      'google/gemini-2.0-flash-thinking-exp:free',
+      'qwen/qwen-2-vl-72b-instruct:free',
+      'google/gemini-flash-1.5-exp:free'
     ];
 
     let lastError = null;
@@ -85,7 +86,7 @@ export default async function handler(req, res) {
       }
     }
 
-    throw new Error(lastError || 'Failed to fetch from OpenRouter models.');
+    throw new Error(lastError || 'All OpenRouter free vision endpoints failed.');
 
   } catch (error) {
     console.error('API Error:', error);

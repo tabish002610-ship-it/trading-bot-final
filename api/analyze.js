@@ -35,8 +35,8 @@ export default async function handler(req, res) {
 
     const promptText = `Analyze this ${marketType || 'Trading'} chart screenshot on a ${timeframe || '15M'} timeframe. Provide trade bias (BUY/SELL), entry, stop loss, take profit targets, and concise technical analysis.`;
 
-    // Updated Google Gemini 2.5 REST Endpoint
-    const googleApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    // Correct Active Model: gemini-2.0-flash
+    const googleApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(googleApiUrl, {
       method: 'POST',

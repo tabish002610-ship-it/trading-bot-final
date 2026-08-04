@@ -1,8 +1,4 @@
 {
   "name": "trading-bot-backend",
-  "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "@google/genai": "^0.1.1"
-  }
+  "version": "1.0.0"
 }

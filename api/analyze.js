@@ -25,16 +25,19 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'GEMINI_API_KEY is not set in environment variables' });
     }
 
-    const { image, marketType, timeframe } = req.body;
-    if (!image) {
+    // फ्रंटएंड से आने वाली इमेज को किसी भी संभावित फील्ड नेम से कैच करेगा
+    const { image, imageData, imageBase64, chart, marketType, timeframe } = req.body || {};
+    const rawImage = image || imageData || imageBase64 || chart;
+
+    if (!rawImage) {
       return res.status(400).json({ error: 'No image provided' });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // Clean base64 data
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+    // Base64 स्ट्रिंग में से फालतू प्रीफिक्स साफ़ करें
+    const base64Data = rawImage.replace(/^data:image\/\w+;base64,/, '');
 
     const imagePart = {
       inlineData: {

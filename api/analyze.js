@@ -35,11 +35,11 @@ export default async function handler(req, res) {
 
     const promptText = `Analyze this ${marketType || 'Trading'} chart screenshot on a ${timeframe || '15M'} timeframe. Provide trade bias (BUY/SELL), entry, stop loss, take profit targets, and concise technical analysis.`;
 
-    // Only active and exact current models
+    // Try fallback starting with 1.5-flash-8b which has high free quota
     const candidateModels = [
-      'gemini-2.5-flash',
-      'gemini-2.0-flash-exp',
-      'gemini-2.5-pro'
+      'gemini-1.5-flash-8b',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-flash'
     ];
 
     let lastError = null;
@@ -78,7 +78,7 @@ export default async function handler(req, res) {
       }
     }
 
-    throw new Error(lastError || 'All models failed to generate analysis.');
+    throw new Error(lastError || 'Quota issue across free models.');
 
   } catch (error) {
     console.error('API Error:', error);

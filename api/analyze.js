@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req, res) {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -25,7 +24,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'GEMINI_API_KEY is not set in environment variables' });
     }
 
-    // फ्रंटएंड से आने वाली इमेज को किसी भी संभावित फील्ड नेम से कैच करेगा
     const { image, imageData, imageBase64, chart, marketType, timeframe } = req.body || {};
     const rawImage = image || imageData || imageBase64 || chart;
 
@@ -34,9 +32,9 @@ export default async function handler(req, res) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
+    // Standard Gemini 1.5 Flash Model
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // Base64 स्ट्रिंग में से फालतू प्रीफिक्स साफ़ करें
     const base64Data = rawImage.replace(/^data:image\/\w+;base64,/, '');
 
     const imagePart = {

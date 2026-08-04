@@ -1,7 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 
 export default async function handler(req, res) {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -22,7 +21,7 @@ export default async function handler(req, res) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY is not set in environment variables' });
+      return res.status(500).json({ error: 'GEMINI_API_KEY is not set' });
     }
 
     const { image, imageData, imageBase64, chart, marketType, timeframe } = req.body || {};
@@ -32,13 +31,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No image provided' });
     }
 
-    // Initialize New Google GenAI SDK
     const ai = new GoogleGenAI({ apiKey: apiKey });
-
-    // Base64 Cleaning
     const base64Data = rawImage.replace(/^data:image\/\w+;base64,/, '');
 
-    // Using gemini-2.5-flash (Standard current vision model)
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [

@@ -1,6 +1,5 @@
-import { GoogleGenAI } from '@google/genai';
-
 export default async function handler(req, res) {
+  // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -21,7 +20,7 @@ export default async function handler(req, res) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY is not set' });
+      return res.status(500).json({ error: 'GEMINI_API_KEY is not set in environment variables' });
     }
 
     const { image, imageData, imageBase64, chart, marketType, timeframe } = req.body || {};
@@ -31,23 +30,45 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No image provided' });
     }
 
-    const ai = new GoogleGenAI({ apiKey: apiKey });
+    // Clean Base64 Data
     const base64Data = rawImage.replace(/^data:image\/\w+;base64,/, '');
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: base64Data,
+    const promptText = `Analyze this ${marketType || 'Trading'} chart screenshot on a ${timeframe || '15M'} timeframe. Provide trade bias (BUY/SELL), entry, stop loss, take profit targets, and concise technical analysis.`;
+
+    // Direct REST API Call to Google Gemini
+    const googleApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const response = await fetch(googleApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: promptText },
+              {
+                inline_data: {
+                  mime_type: 'image/jpeg',
+                  data: base64Data,
+                },
+              },
+            ],
           },
-        },
-        `Analyze this ${marketType || 'Trading'} chart screenshot on a ${timeframe || '15M'} timeframe. Provide trade bias (BUY/SELL), entry, stop loss, take profit targets, and concise technical analysis.`,
-      ],
+        ],
+      }),
     });
 
-    return res.status(200).json({ result: response.text });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Google AI API Error');
+    }
+
+    const analysisResult = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+
+    return res.status(200).json({ result: analysisResult });
   } catch (error) {
     console.error('API Error:', error);
     return res.status(500).json({ error: error.message || 'Failed to analyze chart' });

@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     // Standard Gemini 1.5 Flash Model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     const base64Data = rawImage.replace(/^data:image\/\w+;base64,/, '');
 
